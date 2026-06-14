@@ -97,7 +97,7 @@ xcount -u daviddanielng,elonmusk,github
 Results are always saved to a file — never printed. The file is named `output-{timestamp}.{ext}` and written to the current directory by default.
 
 ```
-output-20250614153042.json
+output--yyyy-mm-dd-hh:mm.json
 ```
 
 ---
