@@ -1,6 +1,7 @@
 # XCount
 
-A CLI tool for extracting follower and following counts for X (Twitter) accounts via direct HTTP requests — no browser required.
+A CLI tool for extracting follower and following counts for X (Twitter) accounts via direct HTTP
+requests — no browser required.
 
 **GitHub:** [github.com/daviddanielng/xcount](https://github.com/daviddanielng/xcount)
 
@@ -17,7 +18,8 @@ A CLI tool for extracting follower and following counts for X (Twitter) accounts
 
 ### Linux (pre-compiled binary)
 
-Download the latest binary from the [Releases](https://github.com/daviddanielng/xcount/releases) tab on GitHub, then make it executable:
+Download the latest binary from the [Releases](https://github.com/daviddanielng/xcount/releases) tab
+on GitHub, then make it executable:
 
 ```bash
 chmod +x xcount
@@ -56,14 +58,14 @@ xcount [OPTIONS] --username <USERNAMES> | --input <FILE>
 
 ### Options
 
-| Flag | Short | Default | Description |
-|---|---|---|---|
-| `--username <USERNAMES>` | `-u` | — | Comma-separated list of usernames *(mutually exclusive with `-i`)* |
-| `--input <FILE>` | `-i` | — | Path to a file with one username per line *(mutually exclusive with `-u`)* |
-| `--format <FORMAT>` | `-f` | `json` | Output format: `json`, `csv`, or `excel` |
-| `--output <DIR>` | `-o` | `.` | Directory to write the output file into |
-| `--delay <SECONDS>` | `-d` | `1` | Seconds to wait between each request |
-| `--verbose` | `-v` | `false` | Print progress and log info to stderr |
+| Flag                     | Short | Default | Description                                                                |
+|--------------------------|-------|---------|----------------------------------------------------------------------------|
+| `--username <USERNAMES>` | `-u`  | —       | Comma-separated list of usernames *(mutually exclusive with `-i`)*         |
+| `--input <FILE>`         | `-i`  | —       | Path to a file with one username per line *(mutually exclusive with `-u`)* |
+| `--format <FORMAT>`      | `-f`  | `json`  | Output format: `json`, `csv`, or `excel`                                   |
+| `--output <DIR>`         | `-o`  | `.`     | Directory to write the output file into                                    |
+| `--delay <SECONDS>`      | `-d`  | `1`     | Seconds to wait between each request                                       |
+| `--verbose`              | `-v`  | `false` | Print progress and log info to stderr                                      |
 
 ---
 
@@ -74,7 +76,8 @@ xcount -u daviddanielng
 xcount -u daviddanielng,elonmusk,github
 ```
 
-Results are always saved to a file — never printed. The file is named `output-{timestamp}.{ext}` and written to the current directory by default.
+Results are always saved to a file — never printed. The file is named `output-{timestamp}.{ext}` and
+written to the current directory by default.
 
 ```
 output-{yyyy-mm-dd-hh::mm}.json
@@ -92,6 +95,7 @@ xcount -i /home/daniel/usernames.txt
 ```
 
 `users.txt` example:
+
 ```
 daviddanielng
 elonmusk
@@ -111,6 +115,7 @@ xcount -i ./users.txt -f json
 ```
 
 **Output filenames follow the pattern `output-{timestamp}.{ext}`:**
+
 ```
 output-{yyyy-mm-dd-hh::mm}.json
 output-{yyyy-mm-dd-hh::mm}.csv
@@ -132,7 +137,8 @@ xcount -i ./users.txt -f excel -o /tmp
 
 ### Delay between requests
 
-Use `-d` to add a pause (in seconds) between each username fetch. Defaults to `1`. Increase this to reduce the chance of getting IP-banned when processing large lists.
+Use `-d` to add a pause (in seconds) between each username fetch. Defaults to `1`. Increase this to
+reduce the chance of getting IP-banned when processing large lists.
 
 ```bash
 xcount -u daviddanielng,elonmusk,github -d 3
@@ -159,27 +165,49 @@ xcount -u daviddanielng,elonmusk -v
 
 ## Error Handling
 
-If a username cannot be fetched (not found, private, rate-limited, etc.) it is silently skipped and will not appear in the output. It is left to you to verify the output and confirm all expected usernames are present.
+If a username cannot be fetched (not found, private, rate-limited, etc.) you will see something like
+this in the output:
+
+`error: is true`
+
+```json
+[
+  {
+    "username": "daviddanielng",
+    "followers": 0,
+    "following": 0,
+    "tweets": 0,
+    "error": true
+  }
+]
+```
 
 ---
 
 ## Output
 
-Each record in the output contains the username, follower count, following count, and tweet count.
+Each record in the output contains the username, follower count, following count, tweet count and
+error status.
 
 **JSON example:**
+
 ```json
 [
   {
     "username": "daviddanielng",
     "followers": 166,
     "following": 418,
-    "tweets": 6076
+    "tweets": 6076,
+    "error": false
   }
 ]
 ```
 
-> **Note on accuracy:** Counts are read directly from the page's `application/ld+json` structured data, not parsed from the shortened display text (e.g. `1.2M`, `418K`) shown in the UI. This means counts are exact, even for accounts with very large follower numbers.
+> **Note:** It is the same in both CSV and Excel formats.
+
+> **Note on accuracy:** Counts are read directly from the page's `application/ld+json` structured
+> data, not parsed from the shortened display text (e.g. `1.2M`, `418K`) shown in the UI. This means
+> counts are exact, even for accounts with very large follower numbers.
 
 ---
 
@@ -187,17 +215,21 @@ Each record in the output contains the username, follower count, following count
 
 - `-u` and `-i` are mutually exclusive — exactly one must be provided.
 - Output is **always written to a file** — results are never printed to the terminal.
-- The output file is named `output-{timestamp}.{ext}` and written to the directory set by `-o` (defaults to the current directory).
+- The output file is named `output-{timestamp}.{ext}` and written to the directory set by `-o` (
+  defaults to the current directory).
 - The delay set with `-d` applies between usernames, not before the first one.
-- The pre-compiled binary targets **Linux x64** only. All other platforms require building from source with `cargo`.
+- The pre-compiled binary targets **Linux x64** only. All other platforms require building from
+  source with `cargo`.
 
 ---
 
 ## Contributing
 
-Issues and pull requests are welcome. If you run into a bug or want to suggest a feature, open an issue on the [GitHub repository](https://github.com/daviddanielng/xcount/issues).
+Issues and pull requests are welcome. If you run into a bug or want to suggest a feature, open an
+issue on the [GitHub repository](https://github.com/daviddanielng/xcount/issues).
 
 When submitting a PR:
+
 - Run `cargo fmt` and `cargo clippy` before committing
 - Keep changes focused — one fix or feature per PR
 - If you're adding behaviour, update this README to reflect it

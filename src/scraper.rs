@@ -8,7 +8,7 @@ pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
     let mut proccessed = 0;
     for username in usernames {
         println!(
-            "Estimated time for all is {} minutes",
+            "Estimated time remaining is {} minutes",
             (((usernames.len() - proccessed) as u64 * (delay + 1)) / 60)
         );
 
