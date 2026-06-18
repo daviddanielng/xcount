@@ -1,6 +1,6 @@
 # XCount
 
-A CLI tool for extracting follower and following counts for X (Twitter) accounts, using a Chromium-based browser.
+A CLI tool for extracting follower and following counts for X (Twitter) accounts via direct HTTP requests — no browser required.
 
 **GitHub:** [github.com/daviddanielng/xcount](https://github.com/daviddanielng/xcount)
 
@@ -8,7 +8,6 @@ A CLI tool for extracting follower and following counts for X (Twitter) accounts
 
 ## Requirements
 
-- A Chromium-based browser (Chrome, Chromium, Edge, Brave, etc.)
 - Linux: pre-compiled binary available
 - Windows / macOS: must build from source (see [Building from Source](#building-from-source))
 
@@ -49,24 +48,6 @@ cp target/release/xcount ~/.local/bin/xcount   # Linux / macOS
 
 ---
 
-## First-Time Setup
-
-Before fetching any data, register your Chromium-based browser with the `-e` flag. Only Chromium-based browsers are supported — Firefox and others will not work.
-
-```bash
-xcount -e /usr/bin/google-chrome
-```
-
-```bash
-xcount -e /usr/bin/chromium
-xcount -e "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-xcount --set-exe-path "C:\Program Files\Google\Chrome\Application\chrome.exe"
-```
-
-This setting is saved and reused for all future runs.
-
----
-
 ## Usage
 
 ```
@@ -83,7 +64,6 @@ xcount [OPTIONS] --username <USERNAMES> | --input <FILE>
 | `--output <DIR>` | `-o` | `.` | Directory to write the output file into |
 | `--delay <SECONDS>` | `-d` | `1` | Seconds to wait between each request |
 | `--verbose` | `-v` | `false` | Print progress and log info to stderr |
-| `--set-exe-path <PATH>` | `-e` | — | Register the path to your Chromium executable |
 
 ---
 
@@ -97,7 +77,7 @@ xcount -u daviddanielng,elonmusk,github
 Results are always saved to a file — never printed. The file is named `output-{timestamp}.{ext}` and written to the current directory by default.
 
 ```
-output--yyyy-mm-dd-hh:mm.json
+output-{yyyy-mm-dd-hh::mm}.json
 ```
 
 ---
@@ -132,9 +112,9 @@ xcount -i ./users.txt -f json
 
 **Output filenames follow the pattern `output-{timestamp}.{ext}`:**
 ```
-output-yyyy-mm-dd-hh:mm.json
-output--yyyy-mm-dd-hh:mm.csv
-output--yyyy-mm-dd-hh:mm.xlsx
+output-{yyyy-mm-dd-hh::mm}.json
+output-{yyyy-mm-dd-hh::mm}.csv
+output-{yyyy-mm-dd-hh::mm}.xlsx
 ```
 
 ---
@@ -170,10 +150,9 @@ xcount -u daviddanielng,elonmusk -v
 ```
 
 ```
-[INFO] Launching browser...
 [INFO] Fetching profile: daviddanielng
 [INFO] Fetching profile: elonmusk
-[INFO] Done. Output saved to output-20250614153042.json
+[INFO] Done. Output saved to output-{yyyy-mm-dd-hh::mm}.json
 ```
 
 ---
@@ -186,20 +165,21 @@ If a username cannot be fetched (not found, private, rate-limited, etc.) it is s
 
 ## Output
 
-Each record in the output contains the username, follower count, and following count.
+Each record in the output contains the username, follower count, following count, and tweet count.
 
 **JSON example:**
 ```json
 [
   {
-    "Username": "daviddanielng",
-    "Follower": "418",
-    "Following": "166"
+    "username": "daviddanielng",
+    "followers": 166,
+    "following": 418,
+    "tweets": 6076
   }
 ]
 ```
 
-> **Note on count accuracy:** X (Twitter) displays shortened counts for large numbers (e.g. `1.2M`, `418K`). XCount expands these to whole numbers, but the expansion is an approximation — the result will not be accurate for large follower counts.
+> **Note on accuracy:** Counts are read directly from the page's `application/ld+json` structured data, not parsed from the shortened display text (e.g. `1.2M`, `418K`) shown in the UI. This means counts are exact, even for accounts with very large follower numbers.
 
 ---
 
@@ -210,4 +190,20 @@ Each record in the output contains the username, follower count, and following c
 - The output file is named `output-{timestamp}.{ext}` and written to the directory set by `-o` (defaults to the current directory).
 - The delay set with `-d` applies between usernames, not before the first one.
 - The pre-compiled binary targets **Linux x64** only. All other platforms require building from source with `cargo`.
-- Only **Chromium-based** browsers are supported. Register yours once with `-e` before the first run.
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. If you run into a bug or want to suggest a feature, open an issue on the [GitHub repository](https://github.com/daviddanielng/xcount/issues).
+
+When submitting a PR:
+- Run `cargo fmt` and `cargo clippy` before committing
+- Keep changes focused — one fix or feature per PR
+- If you're adding behaviour, update this README to reflect it
+
+---
+
+## License
+
+MIT © [David Daniel](https://github.com/daviddanielng)

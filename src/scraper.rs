@@ -1,7 +1,6 @@
 use crate::utils::enity::ProfileData;
 use crate::utils::output::CrawlResult;
 use scraper::{Html, Selector};
-use std::process::exit;
 
 pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
     let mut data = Vec::new();
