@@ -27,9 +27,7 @@ pub struct Args {
         help = "Delay between requests in seconds, we don't want to fast track to an ip ban",
         default_value = "1"
     )]
-    pub delay: u64,
-    #[arg(short = 'e', long, help = "Path to chromium executable")]
-    pub set_exe_path: Option<PathBuf>,
+    pub delay: u64
 }
 
 fn parse_format(s: &str) -> Result<OutputKind, String> {

@@ -1,8 +1,9 @@
 use crate::utils::enity::ProfileData;
 use crate::utils::output::CrawlResult;
 use scraper::{Html, Selector};
+use std::process::exit;
 
-pub async fn get_data(delay: u64, usernames: Vec<String>) -> Vec<CrawlResult> {
+pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
     let mut data = Vec::new();
     let client = reqwest::Client::new();
     for username in usernames {
@@ -25,12 +26,14 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
         .header("User-Agent", "Mozilla/5.0") // X.com blocks requests without a User-Agent
         .send()
         .await;
+
     if response.is_err() {
         println!("Failed to get response for {}", username);
         return None;
     }
     let response = response.unwrap();
     let body = response.text().await;
+
     if body.is_err() {
         println!("Failed to get body for {}", username);
         return None;
@@ -43,19 +46,19 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
         return None;
     }
     let selector = selector.unwrap();
-    // Extract the specific counts from the array
-    let mut follows = 0;
-    let mut friends = 0;
-    let mut tweets = 0;
-    for element in document.select(&selector) {
+    if let Some(element) = document.select(&selector).nth(1) {
         let json_text: String = element.text().collect();
+
         let profile = serde_json::from_str(&*json_text);
         if profile.is_err() {
             println!("Failed to parse JSON-LD for {}", username);
             return None;
         }
         let profile: ProfileData = profile.unwrap();
-
+        // Extract the specific counts from the array
+        let mut follows = 0;
+        let mut friends = 0;
+        let mut tweets = 0;
         for stat in profile.main_entity.interaction_statistic {
             match stat.name.as_str() {
                 "Follows" => follows = stat.count,
@@ -64,6 +67,10 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
                 _ => {}
             }
         }
+        return Some(CrawlResult::new(username, follows, friends, tweets));
+    } else {
+        println!("Json not found for {}.", username);
     }
-    return Some(CrawlResult::new(username, follows, friends, tweets));
+
+    None
 }

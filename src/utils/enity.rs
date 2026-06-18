@@ -6,13 +6,13 @@ pub struct ProfileData {
     pub(crate) main_entity: MainEntity,
 }
 #[derive(Debug, Deserialize)]
-struct MainEntity {
+pub struct MainEntity {
     #[serde(rename = "interactionStatistic")]
     pub(crate) interaction_statistic: Vec<InteractionCounter>,
 }
 
 #[derive(Debug, Deserialize)]
-struct InteractionCounter {
+pub struct InteractionCounter {
     pub(crate) name: String,
     #[serde(rename = "userInteractionCount")]
     pub(crate) count: u64,

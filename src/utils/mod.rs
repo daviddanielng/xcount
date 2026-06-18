@@ -1,4 +1,3 @@
-use clap::builder::Str;
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::{SystemTime, UNIX_EPOCH};
