@@ -1,4 +1,3 @@
-use crate::appconfig::AppConfig;
 use crate::utils::timestamp;
 use clap::Parser;
 use rust_xlsxwriter::{Workbook, XlsxError};
@@ -18,14 +17,22 @@ pub struct CrawlResult {
     pub followers: u64,
     pub following: u64,
     pub tweets: u64,
+    pub error: bool,
 }
 impl CrawlResult {
-    pub fn new(username: String, followers: u64, following: u64, tweets: u64) -> CrawlResult {
+    pub fn new(
+        username: String,
+        followers: u64,
+        following: u64,
+        tweets: u64,
+        error: bool,
+    ) -> CrawlResult {
         CrawlResult {
             username,
             followers,
             following,
             tweets,
+            error,
         }
     }
 }
@@ -75,7 +82,7 @@ impl OutputKind {
         let mut workbook = Workbook::new();
         let worksheet = workbook.add_worksheet();
         // headers
-        worksheet.write_row(0, 0, ["username", "followers", "following"])?;
+        worksheet.write_row(0, 0, ["username", "followers", "following", "tweets","error"])?;
 
         // rows
         for (i, record) in result.iter().enumerate() {
@@ -83,6 +90,9 @@ impl OutputKind {
             worksheet.write(row, 0, &record.username)?;
             worksheet.write(row, 1, record.followers)?;
             worksheet.write(row, 2, record.following)?;
+            worksheet.write(row, 2, record.tweets)?;
+            worksheet.write(row, 2, record.tweets)?;
+            worksheet.write(row, 2, record.error)?;
         }
         workbook.save(&path)?;
         OutputKind::saved(&path);
