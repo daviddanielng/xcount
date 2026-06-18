@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub mod arg;
 pub mod output;
 pub mod source;
+pub mod enity;
 
 pub fn validate_dir(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);

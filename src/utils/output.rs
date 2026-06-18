@@ -12,20 +12,20 @@ pub enum OutputKind {
     Csv,
     Excel,
 }
-#[derive(Serialize, Deserialize)]
-
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CrawlResult {
     pub username: String,
     pub followers: u64,
     pub following: u64,
+    pub tweets: u64,
 }
 impl CrawlResult {
-    pub fn new(username: String, followers: u64, following: u64) -> CrawlResult {
+    pub fn new(username: String, followers: u64, following: u64, tweets: u64) -> CrawlResult {
         CrawlResult {
             username,
             followers,
             following,
+            tweets,
         }
     }
 }
@@ -36,18 +36,15 @@ impl OutputKind {
         match self {
             OutputKind::Json => {
                 file.add_extension("json");
-                OutputKind::save_to_json(result, &file)
-                    .expect("An error occurred saving json")
-            },
+                OutputKind::save_to_json(result, &file).expect("An error occurred saving json")
+            }
             OutputKind::Csv => {
                 file.add_extension("csv");
-                OutputKind::save_to_csv(result, &file)
-                    .expect("An error occurred saving csv");
+                OutputKind::save_to_csv(result, &file).expect("An error occurred saving csv");
             }
             OutputKind::Excel => {
                 file.add_extension("xlsx");
-                OutputKind::save_to_excel(result, &file)
-                    .expect("An error occurred saving excel");
+                OutputKind::save_to_excel(result, &file).expect("An error occurred saving excel");
             }
         }
     }

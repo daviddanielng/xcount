@@ -11,7 +11,7 @@ pub struct Args {
     pub verbose: bool,
     #[command(flatten, help = "Source of data, either username or file")]
     pub source: Source,
-    #[arg(short = 'o', long,value_parser=validate_dir, default_value = ".", help = "Output directory")]
+    #[arg(short = 'o', long,value_parser = validate_dir, default_value = ".", help = "Output directory")]
     pub output: PathBuf,
     #[arg(
         short = 'f',
