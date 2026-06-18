@@ -5,20 +5,20 @@ use scraper::{Html, Selector};
 pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
     let mut data = Vec::new();
     let client = reqwest::Client::new();
+    let mut proccessed= 0;
     for username in usernames {
-        let g = collect(&client, username.clone()).await;
-        if g.is_none() {
-            println!("Failed to get data for {}", username);
-            continue;
-        }
-        let g = g.unwrap();
-        data.push(g);
+        println!("Estimated time for all is {} minutes",(((usernames.len()-proccessed) as u64 *(delay+1))/60));
+     
+        data.push(collect(&client, username.clone()).await);
+        proccessed=proccessed+1;
         tokio::time::sleep(std::time::Duration::from_secs(delay)).await;
     }
     data
+
+     
 }
 
-pub async fn collect(client: &reqwest::Client, username: String) -> Option<CrawlResult> {
+pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult {
     println!("Getting username for {}", username);
     let response = client
         .get(format!("https://x.com/{}", username))
@@ -27,22 +27,22 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
         .await;
 
     if response.is_err() {
-        println!("Failed to get response for {}", username);
-        return None;
+        red( format!("Failed to get response for {}", username));
+        return zero(username);
     }
     let response = response.unwrap();
     let body = response.text().await;
 
     if body.is_err() {
-        println!("Failed to get body for {}", username);
-        return None;
+        red( format!("Failed to get body for {}", username));
+        return zero(username);
     }
     let body = body.unwrap();
     let document = Html::parse_document(&*body);
     let selector = Selector::parse("script[type='application/ld+json']");
     if selector.is_err() {
-        println!("Failed to parse selector for {}", username);
-        return None;
+        red( format!("Failed to parse selector for {}", username));
+        return zero(username);
     }
     let selector = selector.unwrap();
     if let Some(element) = document.select(&selector).nth(1) {
@@ -50,8 +50,8 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
 
         let profile = serde_json::from_str(&*json_text);
         if profile.is_err() {
-            println!("Failed to parse JSON-LD for {}", username);
-            return None;
+           red( format!("Failed to parse JSON-LD for {}", username));
+            return zero(username);
         }
         let profile: ProfileData = profile.unwrap();
         // Extract the specific counts from the array
@@ -63,13 +63,26 @@ pub async fn collect(client: &reqwest::Client, username: String) -> Option<Crawl
                 "Follows" => follows = stat.count,
                 "Friends" => friends = stat.count,
                 "Tweets" => tweets = stat.count,
-                _ => {}
+                _ => {
+                     return zero(username);
+                }
             }
         }
-        return Some(CrawlResult::new(username, follows, friends, tweets));
+        return CrawlResult::new(username, follows, friends, tweets);
     } else {
-        println!("Json not found for {}.", username);
+        red( format!("Json not found for {}.", username));
     }
 
-    None
+     return zero(username);
+}
+
+fn zero(username:String)-> CrawlResult{
+    return   CrawlResult::new(username, 0, 0, 0);
+}
+
+fn red(text:String){
+    println!(
+            "\x1b[31m {} \x1b[0m",
+           text
+        );
 }
