@@ -32,12 +32,6 @@ async fn main() {
     let usernames = args.source.get_usernames();
     validate_usernames(&usernames);
     let results = get_data(args.delay, &usernames).await;
-    if usernames.len() != results.len() {
-        println!(
-            "\x1b[31m Check output, you requested for {} username but only {} was proccessed.\x1b[0m",
-            usernames.len(),
-            results.len()
-        );
-    }
+   
     args.format.export(&results, &args.output);
 }

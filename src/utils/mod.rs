@@ -35,7 +35,7 @@ pub fn validate_username(username: &str) -> Option<String> {
         return Some(format!("`{}` Username cannot be empty", username));
     }
 
-    if username.len() > 15 {
+    if username.len() > 150 {
         return Some(format!(
             "`{}` Username cannot be longer than 15 characters",
             username
