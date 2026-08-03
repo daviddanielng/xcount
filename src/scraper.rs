@@ -21,18 +21,19 @@ pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
 
 pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult {
     println!("Getting username for {}", username);
-    let response = client
-        .get(format!("https://x.com/{}", username))
-        .header("User-Agent", "Mozilla/5.0") // X.com blocks requests without a User-Agent
-        .send()
-        .await;
+    // let response = client
+    //     .get(format!("https://x.com/{}", username))
+    //     .header("User-Agent", "Mozilla/5.0") // X.com blocks requests without a User-Agent
+    //     .send()
+    //     .await;
 
-    if response.is_err() {
-        red(format!("Failed to get response for {}", username));
-        return zero(username);
-    }
-    let response = response.unwrap();
-    let body = response.text().await;
+    // if response.is_err() {
+    //     red(format!("Failed to get response for {}", username));
+    //     return zero(username);
+    // }
+    // let response = response.unwrap();
+    // let body = response.text().await;
+    let body = std::fs::read_to_string("app.html");
 
     if body.is_err() {
         red(format!("Failed to get body for {}", username));
@@ -40,41 +41,50 @@ pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult 
     }
     let body = body.unwrap();
     let document = Html::parse_document(&*body);
-    let selector = Selector::parse("script[type='application/ld+json']");
-    if selector.is_err() {
+    let stat_selector = Selector::parse("div[itemtype='https://schema.org/InteractionCounter']");
+    if stat_selector.is_err() {
         red(format!("Failed to parse selector for {}", username));
         return zero(username);
     }
-    let selector = selector.unwrap();
-    if let Some(element) = document.select(&selector).nth(1) {
-        let json_text: String = element.text().collect();
+    let stat_selector = stat_selector.unwrap();
 
-        let profile = serde_json::from_str(&*json_text);
-        if profile.is_err() {
-            red(format!("Failed to parse JSON-LD for {}", username));
-            return zero(username);
-        }
-        let profile: ProfileData = profile.unwrap();
-        // Extract the specific counts from the array
-        let mut follows = 0;
-        let mut friends = 0;
-        let mut tweets = 0;
-        for stat in profile.main_entity.interaction_statistic {
-            match stat.name.as_str() {
-                "Follows" => follows = stat.count,
-                "Friends" => friends = stat.count,
-                "Tweets" => tweets = stat.count,
-                _ => {
-                    return zero(username);
-                }
+    let name_selector = Selector::parse("meta[itemprop='name']").unwrap();
+    let count_selector = Selector::parse("meta[itemprop='userInteractionCount']").unwrap();
+
+    let mut follows = 0u64;
+    let mut friends = 0u64;
+    let mut tweets = 0u64;
+    let mut found_any = false;
+
+    for stat_div in document.select(&stat_selector) {
+        let name = stat_div
+            .select(&name_selector)
+            .next()
+            .and_then(|el| el.value().attr("content"));
+
+        let count = stat_div
+            .select(&count_selector)
+            .next()
+            .and_then(|el| el.value().attr("content"))
+            .and_then(|c| c.parse::<u64>().ok());
+
+        if let (Some(name), Some(count)) = (name, count) {
+            found_any = true;
+            match name {
+                "Follows" => follows = count,
+                "Following" => friends = count,
+                "Tweets" => tweets = count,
+                _ => {}
             }
         }
-        return CrawlResult::new(username, follows, friends, tweets, false);
-    } else {
-        red(format!("Json not found for {}.", username));
     }
 
-    return zero(username);
+    if !found_any {
+        red(format!("Interaction stats not found for {}.", username));
+        return zero(username);
+    }
+
+    return CrawlResult::new(username, follows, friends, tweets, false);
 }
 
 fn zero(username: String) -> CrawlResult {
