@@ -21,19 +21,19 @@ pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
 
 pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult {
     println!("Getting username for {}", username);
-    // let response = client
-    //     .get(format!("https://x.com/{}", username))
-    //     .header("User-Agent", "Mozilla/5.0") // X.com blocks requests without a User-Agent
-    //     .send()
-    //     .await;
+    let response = client
+        .get(format!("https://x.com/{}", username))
+        .header("User-Agent", "Mozilla/5.0") // X.com blocks requests without a User-Agent
+        .send()
+        .await;
 
-    // if response.is_err() {
-    //     red(format!("Failed to get response for {}", username));
-    //     return zero(username);
-    // }
-    // let response = response.unwrap();
-    // let body = response.text().await;
-    let body = std::fs::read_to_string("app.html");
+    if response.is_err() {
+        red(format!("Failed to get response for {}", username));
+        return zero(username);
+    }
+    let response = response.unwrap();
+    let body = response.text().await;
+    // let body = std::fs::read_to_string("app.html");
 
     if body.is_err() {
         red(format!("Failed to get body for {}", username));
