@@ -238,4 +238,4 @@ When submitting a PR:
 
 ## License
 
-MIT © [David Daniel](https://github.com/daviddanielng)
+MIT © [Daniel Enubiaka](https://github.com/daviddanielng)
