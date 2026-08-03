@@ -1,3 +1,5 @@
+use std::{fs, process::exit};
+
 use crate::utils::enity::ProfileData;
 use crate::utils::output::CrawlResult;
 use scraper::{Html, Selector};
@@ -40,51 +42,54 @@ pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult 
         return zero(username);
     }
     let body = body.unwrap();
+
     let document = Html::parse_document(&*body);
-    let stat_selector = Selector::parse("div[itemtype='https://schema.org/InteractionCounter']");
-    if stat_selector.is_err() {
-        red(format!("Failed to parse selector for {}", username));
-        return zero(username);
-    }
-    let stat_selector = stat_selector.unwrap();
+    let stat_selector = Selector::parse(
+    "div[itemprop='mainEntity'] > div[itemtype='https://schema.org/InteractionCounter']"
+);
+if stat_selector.is_err() {
+    red(format!("Failed to parse selector for {}", username));
+    return zero(username);
+}
+let stat_selector = stat_selector.unwrap();
 
-    let name_selector = Selector::parse("meta[itemprop='name']").unwrap();
-    let count_selector = Selector::parse("meta[itemprop='userInteractionCount']").unwrap();
+let name_selector = Selector::parse("meta[itemprop='name']").unwrap();
+let count_selector = Selector::parse("meta[itemprop='userInteractionCount']").unwrap();
 
-    let mut follows = 0u64;
-    let mut friends = 0u64;
-    let mut tweets = 0u64;
-    let mut found_any = false;
+let mut follows = 0u64;
+let mut friends = 0u64; // "Following"
+let mut tweets = 0u64;
+let mut found_any = false;
 
-    for stat_div in document.select(&stat_selector) {
-        let name = stat_div
-            .select(&name_selector)
-            .next()
-            .and_then(|el| el.value().attr("content"));
+for stat_div in document.select(&stat_selector) {
+    let name = stat_div
+        .select(&name_selector)
+        .next()
+        .and_then(|el| el.value().attr("content"));
 
-        let count = stat_div
-            .select(&count_selector)
-            .next()
-            .and_then(|el| el.value().attr("content"))
-            .and_then(|c| c.parse::<u64>().ok());
+    let count = stat_div
+        .select(&count_selector)
+        .next()
+        .and_then(|el| el.value().attr("content"))
+        .and_then(|c| c.parse::<u64>().ok());
 
-        if let (Some(name), Some(count)) = (name, count) {
-            found_any = true;
-            match name {
-                "Follows" => follows = count,
-                "Following" => friends = count,
-                "Tweets" => tweets = count,
-                _ => {}
-            }
+    if let (Some(name), Some(count)) = (name, count) {
+        found_any = true;
+        match name {
+            "Follows" => follows = count,
+            "Following" => friends = count,
+            "Tweets" => tweets = count,
+            _ => {}
         }
     }
+}
 
-    if !found_any {
-        red(format!("Interaction stats not found for {}.", username));
-        return zero(username);
-    }
+if !found_any {
+    red(format!("Interaction stats not found for {}.", username));
+    return zero(username);
+}
 
-    return CrawlResult::new(username, follows, friends, tweets, false);
+return CrawlResult::new(username, follows, friends, tweets, false);
 }
 
 fn zero(username: String) -> CrawlResult {
