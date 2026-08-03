@@ -82,7 +82,11 @@ impl OutputKind {
         let mut workbook = Workbook::new();
         let worksheet = workbook.add_worksheet();
         // headers
-        worksheet.write_row(0, 0, ["username", "followers", "following", "tweets","error"])?;
+        worksheet.write_row(
+            0,
+            0,
+            ["username", "followers", "following", "tweets", "error"],
+        )?;
 
         // rows
         for (i, record) in result.iter().enumerate() {
@@ -90,9 +94,8 @@ impl OutputKind {
             worksheet.write(row, 0, &record.username)?;
             worksheet.write(row, 1, record.followers)?;
             worksheet.write(row, 2, record.following)?;
-            worksheet.write(row, 2, record.tweets)?;
-            worksheet.write(row, 2, record.tweets)?;
-            worksheet.write(row, 2, record.error)?;
+            worksheet.write(row, 3, record.tweets)?;
+            worksheet.write(row, 4, record.error)?;
         }
         workbook.save(&path)?;
         OutputKind::saved(&path);
