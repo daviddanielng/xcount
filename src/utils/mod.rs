@@ -3,9 +3,9 @@ use std::process::exit;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub mod arg;
+pub mod enity;
 pub mod output;
 pub mod source;
-pub mod enity;
 
 pub fn validate_dir(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
@@ -60,7 +60,6 @@ pub fn validate_usernames(usernames: &Vec<String>) {
     }
 }
 
-
 fn timestamp() -> String {
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -84,7 +83,20 @@ fn timestamp() -> String {
         year += 1;
     }
 
-    let months = [31, if is_leap(year) { 29 } else { 28 }, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let months = [
+        31,
+        if is_leap(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
     let mut month = 1u32;
     for days_in_month in months {
         if remaining < days_in_month {
