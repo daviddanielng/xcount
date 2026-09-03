@@ -9,13 +9,14 @@ requests — no browser required.
 
 ## Requirements
 
+> Note: Release is no longer up to date, you must run it with `cargo run`
 - Linux: pre-compiled binary available
 - Windows / macOS: must build from source (see [Building from Source](#building-from-source))
 
 ---
 
 ## Installation
-
+> Note: Release is no longer up to date, you must run it with `cargo run`
 ### Linux (pre-compiled binary)
 
 Download the latest binary from the [Releases](https://github.com/daviddanielng/xcount/releases) tab
