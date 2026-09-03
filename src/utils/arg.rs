@@ -27,7 +27,7 @@ pub struct Args {
         help = "Delay between requests in seconds, we don't want to fast track to an ip ban",
         default_value = "1"
     )]
-    pub delay: u64
+    pub delay: u64,
 }
 
 fn parse_format(s: &str) -> Result<OutputKind, String> {
