@@ -52,7 +52,7 @@ pub async fn get_data(delay: u64, usernames: &Vec<String>) -> Vec<CrawlResult> {
 //   followers:14225857,following:1381,...,restId:"32660559",screenName:"wizkidayo",tweets:54325
 static PROFILE_STATS_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r#"(?s)followers:(\d+),following:(\d+),.*?restId:"(\d+)",screenName:"([^"]+)",tweets:(\d+)"#,
+        r#"(?s)followers:(\d+),following:(\d+),.*?restId:"(\d+)",.*?screenName:"([^"]+)",tweets:(\d+)"#,
     )
     .expect("static regex is valid")
 });
@@ -99,6 +99,56 @@ async fn use_relay_script(body: String, username: String) -> CrawlResult {
 
     CrawlResult::new(username, follows, friends, tweets, false)
 }
+
+fn use_initial_state(body: &str, username: &str) -> Option<CrawlResult> {
+    let document = Html::parse_document(body);
+    let selector = Selector::parse("script").ok()?;
+
+    for script in document.select(&selector) {
+        let text: String = script.text().collect();
+        let Some((_, state_text)) = text.split_once("window.__INITIAL_STATE__") else {
+            continue;
+        };
+        let state_text = state_text.trim_start();
+        let Some(state_text) = state_text.strip_prefix('=') else {
+            continue;
+        };
+        let state_text = state_text.trim_start();
+        let state_text = state_text.strip_suffix(';').unwrap_or(state_text).trim();
+        let Ok(state) = serde_json::from_str::<serde_json::Value>(state_text) else {
+            continue;
+        };
+        let Some(users) = state
+            .pointer("/entities/users/entities")
+            .and_then(serde_json::Value::as_object)
+        else {
+            continue;
+        };
+
+        let Some(user) = users.values().find(|user| {
+            user.get("screen_name")
+                .and_then(serde_json::Value::as_str)
+                .is_some_and(|screen_name| screen_name.eq_ignore_ascii_case(username))
+        }) else {
+            continue;
+        };
+
+        let followers = user.get("followers_count")?.as_u64()?;
+        let following = user.get("friends_count")?.as_u64()?;
+        let tweets = user.get("statuses_count")?.as_u64()?;
+
+        return Some(CrawlResult::new(
+            username.to_owned(),
+            followers,
+            following,
+            tweets,
+            false,
+        ));
+    }
+
+    None
+}
+
 pub async fn use_app_script(body: String, username: String) -> CrawlResult {
     let document = Html::parse_document(&*body);
     let script_selector = match Selector::parse(r#"script[data-testid="UserProfileSchema-test"]"#) {
@@ -126,10 +176,8 @@ pub async fn use_app_script(body: String, username: String) -> CrawlResult {
     let mut follows = 0u64;
     let mut friends = 0u64; // "Following"
     let mut tweets = 0u64;
-    let mut found_any = false;
 
     for stat in schema.main_entity.interaction_statistic {
-        found_any = true;
         match stat.name.as_str() {
             "Follows" => follows = stat.user_interaction_count,
             "Friends" => friends = stat.user_interaction_count,
@@ -139,6 +187,83 @@ pub async fn use_app_script(body: String, username: String) -> CrawlResult {
     }
     return CrawlResult::new(username, follows, friends, tweets, false);
 }
+async fn use_ld_json(body: String, username: String) -> CrawlResult {
+    let document = Html::parse_document(&body);
+    let selector = match Selector::parse(r#"script[type="application/ld+json"]"#) {
+        Ok(selector) => selector,
+        Err(_) => {
+            red(format!("Failed to parse JSON-LD selector for {}", username));
+            return zero(username);
+        }
+    };
+
+    let Some(script) = document.select(&selector).next() else {
+        red(format!("No JSON-LD profile schema found for {}", username));
+        return zero(username);
+    };
+
+    let json_text: String = script.text().collect();
+    let profile: ProfileData = match serde_json::from_str(&json_text) {
+        Ok(profile) => profile,
+        Err(error) => {
+            red(format!(
+                "Failed to parse JSON-LD for {}: {}",
+                username, error
+            ));
+            return zero(username);
+        }
+    };
+
+    let mut follows = 0;
+    let mut friends = 0;
+    let mut tweets = 0;
+    let mut found_stat = false;
+
+    for stat in profile.main_entity.interaction_statistic {
+        match stat.name.as_str() {
+            "Follows" => {
+                follows = stat.count;
+                found_stat = true;
+            }
+            "Friends" => {
+                friends = stat.count;
+                found_stat = true;
+            }
+            "Tweets" => {
+                tweets = stat.count;
+                found_stat = true;
+            }
+            _ => {}
+        }
+    }
+
+    if !found_stat {
+        red(format!("Interaction stats not found for {}.", username));
+        return zero(username);
+    }
+
+    CrawlResult::new(username, follows, friends, tweets, false)
+}
+
+async fn use_profile_data(body: String, username: String) -> CrawlResult {
+    let has_json_ld = Selector::parse(r#"script[type="application/ld+json"]"#)
+        .ok()
+        .is_some_and(|selector| {
+            Html::parse_document(&body)
+                .select(&selector)
+                .next()
+                .is_some()
+        });
+
+    if has_json_ld {
+        use_ld_json(body, username).await
+    } else if let Some(result) = use_initial_state(&body, &username) {
+        result
+    } else {
+        use_relay_script(body, username).await
+    }
+}
+
 async fn use_div(body: String, username: String) -> CrawlResult {
     let document = Html::parse_document(&*body);
     let stat_selector = Selector::parse(
@@ -210,11 +335,10 @@ pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult 
         return zero(username);
     }
     let body = body.unwrap();
-    let resultt=use_relay_script(body, username).await;
-    println!(
-        "{:?}",
-        resultt
-    );
+    std::fs::write("./hello.html", &body).expect("TODO: panic message");
+
+    let resultt = use_profile_data(body, username).await;
+    println!("{:?}", resultt);
     return resultt;
 }
 
@@ -224,4 +348,32 @@ fn zero(username: String) -> CrawlResult {
 
 fn red(text: String) {
     println!("\x1b[31m {} \x1b[0m", text);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{use_initial_state, use_relay_script};
+
+    #[tokio::test]
+    async fn relay_script_reads_current_profile_shape() {
+        let body = r#"<script>($R=>$R[0]={profile:{followers:180,following:463,hasHighlights:!1,isUnavailable:!1,isVerified:!1,location:"wherever",name:"Daniel",possiblySensitive:!1,profileStatus:"Available",restId:"972624651993141248",schema:null,screenName:"daviddanielng",tweets:6852}})($R);</script>"#;
+        let result = use_relay_script(body.to_owned(), "daviddanielng".to_owned()).await;
+
+        assert_eq!(result.followers, 180);
+        assert_eq!(result.following, 463);
+        assert_eq!(result.tweets, 6852);
+        assert!(!result.error);
+    }
+
+    #[test]
+    fn initial_state_selects_counts_for_requested_screen_name() {
+        let body = r#"<script>window.__INITIAL_STATE__
+            = {"entities":{"users":{"entities":{"1":{"screen_name":"other","followers_count":1,"friends_count":2,"statuses_count":3},"2":{"screen_name":"daviddanielng","followers_count":180,"friends_count":463,"statuses_count":6852}}}}};</script>"#;
+        let result = use_initial_state(body, "daviddanielng").unwrap();
+
+        assert_eq!(result.followers, 180);
+        assert_eq!(result.following, 463);
+        assert_eq!(result.tweets, 6852);
+        assert!(!result.error);
+    }
 }
