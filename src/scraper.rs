@@ -313,14 +313,19 @@ async fn use_div(body: String, username: String) -> CrawlResult {
 
     return CrawlResult::new(username, follows, friends, tweets, false);
 }
+fn is_cloudflare_challenge(body: &str) -> bool {
+    body.contains("Just a moment...") && body.contains("cdn-cgi/challenge-platform")
+}
+
 pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult {
     println!("Getting username for {}", username);
     let response = client
         .get(format!("https://x.com/{}", username))
-.header(
-    "User-Agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-)        .send()
+        .header(
+            "User-Agent",
+            concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")),
+        )
+        .send()
         .await;
 
     if response.is_err() {
@@ -337,6 +342,14 @@ pub async fn collect(client: &reqwest::Client, username: String) -> CrawlResult 
     let body = body.unwrap();
     std::fs::write("./hello.html", &body).expect("TODO: panic message");
 
+    if is_cloudflare_challenge(&body) {
+        red(format!(
+            "Cloudflare blocked the request for {}; profile data is unavailable",
+            username
+        ));
+        return zero(username);
+    }
+
     let resultt = use_profile_data(body, username).await;
     println!("{:?}", resultt);
     return resultt;
@@ -352,7 +365,16 @@ fn red(text: String) {
 
 #[cfg(test)]
 mod tests {
-    use super::{use_initial_state, use_relay_script};
+    use super::{is_cloudflare_challenge, use_initial_state, use_relay_script};
+
+    #[test]
+    fn detects_cloudflare_challenge_page() {
+        let body = r#"<html><head><title>Just a moment...</title></head><body><script src="/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1"></script></body></html>"#;
+        assert!(is_cloudflare_challenge(body));
+        assert!(!is_cloudflare_challenge(
+            "<html><title>Profile</title></html>"
+        ));
+    }
 
     #[tokio::test]
     async fn relay_script_reads_current_profile_shape() {
